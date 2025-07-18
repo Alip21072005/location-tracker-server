@@ -1,7 +1,7 @@
 // Di public/script.js Anda
 
 const BACKEND_URL =
-  "https://lf39ilm1td.execute-api.ap-southeast-2.amazonaws.com/default/undangan";
+  "https://oeof1hps90.execute-api.ap-southeast-1.amazonaws.com/default";
 
 document.getElementById("allowLocation").addEventListener("click", function () {
   if (navigator.geolocation) {
