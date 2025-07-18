@@ -12,9 +12,16 @@
   "type": "commonjs",
   "dependencies": {
     "dotenv": "^17.2.0",
-    "express": "^5.1.0",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.4",
     "nodemailer": "^7.0.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alip21072005/location-tracker-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Alip21072005/location-tracker-server/issues"
+  },
+  "homepage": "https://github.com/Alip21072005/location-tracker-server#readme"
 }
