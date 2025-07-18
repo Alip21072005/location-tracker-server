@@ -2,7 +2,7 @@
 
 // Ganti dengan URL API Gateway yang Anda dapatkan dari AWS
 const BACKEND_URL =
-  "https://k8927ehsk1.execute-api.ap-southeast-2.amazonaws.com/default/undangan"; // Contoh URL dari AWS API Gateway
+  "https://70jkk5rjei.execute-api.ap-southeast-2.amazonaws.com/undangan"; // Contoh URL dari AWS API Gateway
 
 document.getElementById("allowLocation").addEventListener("click", function () {
   if (navigator.geolocation) {
