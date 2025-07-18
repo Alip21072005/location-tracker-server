@@ -1,8 +1,7 @@
 // Di public/script.js Anda
 
-// Ganti dengan URL API Gateway yang Anda dapatkan dari AWS
 const BACKEND_URL =
-  "https://70jkk5rjei.execute-api.ap-southeast-2.amazonaws.com/undangan"; // Contoh URL dari AWS API Gateway
+  "https://lf39ilm1td.execute-api.ap-southeast-2.amazonaws.com/default/undangan";
 
 document.getElementById("allowLocation").addEventListener("click", function () {
   if (navigator.geolocation) {
@@ -25,7 +24,7 @@ async function successCallback(position) {
 
   try {
     const response = await fetch(BACKEND_URL, {
-      // Perhatikan tidak ada /send-location tambahan di sini jika sudah ada di URL
+      // Gunakan BACKEND_URL langsung
       method: "POST",
       headers: {
         "Content-Type": "application/json",
