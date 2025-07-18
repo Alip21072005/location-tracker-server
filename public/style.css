@@ -1,0 +1,63 @@
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f7f0e8;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  text-align: center;
+}
+
+.container {
+  background-color: #fff;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 90%;
+}
+
+h1 {
+  color: #a52a2a; /* Warna coklat tua */
+  margin-bottom: 10px;
+  font-size: 2.5em;
+}
+
+h2 {
+  color: #4a4a4a;
+  margin-bottom: 25px;
+  font-size: 1.8em;
+}
+
+p {
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+strong {
+  color: #a52a2a;
+}
+
+button {
+  background-color: #4caf50; /* Warna hijau */
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.footer {
+  margin-top: 30px;
+  font-size: 0.9em;
+  color: #777;
+}
